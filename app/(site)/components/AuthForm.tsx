@@ -6,6 +6,10 @@ import Input from '@/app/components/inputs/Input';
 import Button from '@/app/components/Button';
 import AuthSocialButton from '@/app/(site)/components/AuthSocialButton';
 import { BsGithub, BsGoogle } from 'react-icons/all';
+import axios from 'axios';
+import toast from 'react-hot-toast';
+import { signIn } from 'next-auth/react';
+import { router } from 'next/client';
 
 type Variant = 'LOGIN' | 'REGISTER';
 export default function AuthForm() {
@@ -35,20 +39,46 @@ export default function AuthForm() {
   })
 
   const onSubmit: SubmitHandler<FieldValues> = (data) => {
-    console.log(data);
     setIsLoading(true);
 
     if (variant === 'REGISTER') {
-
+      axios.post('/api/register', data)
+        .catch((err) => toast.error('Something went wrong!'))
+        .finally(() => setIsLoading(false));
     }
 
     if (variant === 'LOGIN') {
+      signIn('credentials', {
+        ...data,
+        redirect: false
+      })
+        .then((callback) => {
+          if (callback?.error) {
+            toast.error('Invalid credentials!');
+          }
 
+          if (callback?.ok) {
+            router.push('/conversations')
+          }
+        })
+        .finally(() => setIsLoading(false))
     }
   }
 
   const socialAction = (action: string) => {
     setIsLoading(true);
+
+    signIn(action, { redirect: false })
+        .then((callback) => {
+          if (callback?.error) {
+            toast.error('Invalid credentials!');
+          }
+
+          if (callback?.ok) {
+            router.push('/conversations')
+          }
+        })
+        .finally(() => setIsLoading(false));
   }
 
   return (
@@ -59,21 +89,27 @@ export default function AuthForm() {
             <Input
               id="name"
               label="Name"
+              disabled={isLoading}
               register={register}
               errors={errors}
+              required
             />
           }
           <Input
             id="email"
             label="Email"
+            disabled={isLoading}
             register={register}
             errors={errors}
+            required
           />
           <Input
             id="password"
             label="Password"
+            disabled={isLoading}
             register={register}
             errors={errors}
+            required
           />
           <Button
             type="submit"
